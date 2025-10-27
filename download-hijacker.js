@@ -1,5 +1,5 @@
 // download-hijacker.js
-// 增强版下载链接劫持脚本
+// 下载链接劫持脚本
 // 由 unsiao 开发
 // 遵循 Apache 2.0 许可证
 
