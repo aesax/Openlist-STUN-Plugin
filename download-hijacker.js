@@ -1,14 +1,14 @@
 // download-hijacker.js
-// Enhanced Download Link Hijacking Script
-// Developed by unsiao
-// Licensed under Apache License 2.0
+// 增强版下载链接劫持脚本
+// 由 unsiao 开发
+// 遵循 Apache 2.0 许可证
 
 (function() {
     'use strict';
     
-    console.log('🔧 Download hijacker loading...');
+    console.log('🔧 下载劫持脚本开始加载...');
     
-    // Configuration
+    // 配置设置
     const CONFIG = {
         originalDomain: 'https://demo.com',
         targetDomain: 'https://down.demo.com',
@@ -17,8 +17,9 @@
         iframeCleanupTime: 3000
     };
     
-    // Utility functions
+    // 工具函数
     const utils = {
+        // 调试日志
         log(message, data = null) {
             if (CONFIG.debug) {
                 const timestamp = new Date().toLocaleTimeString();
@@ -26,26 +27,30 @@
             }
         },
         
+        // 错误日志
         error(message, error = null) {
             const timestamp = new Date().toLocaleTimeString();
             console.error(`%c[${timestamp}] ❌ ${message}`, 'color: #e74c3c; font-weight: bold;', error || '');
         },
         
+        // 检查URL是否匹配目标模式
         isTargetUrl(url) {
             if (!url || typeof url !== 'string') return false;
             return [CONFIG.originalDomain, 'demo.com'].some(pattern => url.includes(pattern));
         },
         
+        // 生成备用端口
         generateFallbackPort() {
             return Math.floor(Math.random() * 5000) + 2000;
         }
     };
     
-    // Port management
+    // 端口管理
     const portManager = {
+        // 获取动态端口
         async getDynamicPort() {
             try {
-                utils.log('🔄 Requesting dynamic port...');
+                utils.log('🔄 正在请求动态端口...');
                 
                 const response = await fetch(CONFIG.stunApi, {
                     method: 'GET',
@@ -62,38 +67,41 @@
                 const data = await response.json();
                 const port = data?.port || data?.data?.port;
                 
-                if (!port) throw new Error('No port information found in response');
+                if (!port) throw new Error('响应中未找到端口信息');
                 
-                utils.log(`✅ Port acquired: ${port}`);
+                utils.log(`✅ 获取到端口: ${port}`);
                 return port.toString();
                 
             } catch (error) {
-                utils.error('Port acquisition failed', error);
+                utils.error('获取端口失败', error);
                 const fallbackPort = utils.generateFallbackPort();
-                utils.log(`🔄 Using fallback port: ${fallbackPort}`);
+                utils.log(`🔄 使用备用端口: ${fallbackPort}`);
                 return fallbackPort.toString();
             }
         }
     };
     
-    // URL processing
+    // URL处理器
     const urlProcessor = {
+        // 构建新的下载URL
         buildNewUrl(originalUrl, port) {
             if (!port) return originalUrl;
             
             try {
                 const urlObj = new URL(originalUrl);
                 
+                // 替换域名
                 if (CONFIG.targetDomain) {
                     const targetUrl = new URL(CONFIG.targetDomain);
                     urlObj.hostname = targetUrl.hostname;
                     urlObj.protocol = targetUrl.protocol;
                 }
                 
+                // 替换端口
                 urlObj.port = port;
                 const newUrl = urlObj.toString();
                 
-                utils.log('🔗 URL rewrite completed', { 
+                utils.log('🔗 URL重写完成', { 
                     original: originalUrl, 
                     new: newUrl,
                     replacedDomain: CONFIG.targetDomain,
@@ -103,19 +111,20 @@
                 return newUrl;
                 
             } catch (error) {
-                utils.error('URL parsing failed', error);
+                utils.error('URL解析失败', error);
                 return originalUrl;
             }
         }
     };
     
-    // Download handler
+    // 下载处理器
     const downloadHandler = {
+        // 处理下载请求
         async processDownload(originalUrl, source = 'unknown') {
-            utils.log(`🎯 Download request detected (source: ${source})`, originalUrl);
+            utils.log(`🎯 检测到下载请求 (来源: ${source})`, originalUrl);
             
             if (!utils.isTargetUrl(originalUrl)) {
-                utils.log('⏭️ Non-target URL, skipping');
+                utils.log('⏭️ 非目标URL，跳过处理');
                 return false;
             }
             
@@ -124,32 +133,35 @@
                 const newUrl = urlProcessor.buildNewUrl(originalUrl, port);
                 
                 this.triggerDownload(newUrl);
-                utils.log('✅ Download triggered', newUrl);
+                utils.log('✅ 下载已触发', newUrl);
                 return true;
                 
             } catch (error) {
-                utils.error('Download processing failed', error);
+                utils.error('下载处理失败', error);
                 return false;
             }
         },
         
+        // 触发下载
         triggerDownload(url) {
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = url;
             document.body.appendChild(iframe);
             
+            // 清理iframe
             setTimeout(() => {
                 if (document.body.contains(iframe)) {
                     document.body.removeChild(iframe);
-                    utils.log('🧹 Download iframe cleaned up');
+                    utils.log('🧹 清理下载iframe');
                 }
             }, CONFIG.iframeCleanupTime);
         }
     };
     
-    // Hijacking methods
+    // 劫持方法
     const hijackMethods = {
+        // 劫持链接点击事件
         linkClicks() {
             document.addEventListener('click', (e) => {
                 let target = e.target;
@@ -158,7 +170,7 @@
                     if (target.tagName === 'A' && target.href && utils.isTargetUrl(target.href)) {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        utils.log('🚫 Default behavior prevented, processing download', target.href);
+                        utils.log('🚫 阻止默认行为，开始处理下载', target.href);
                         downloadHandler.processDownload(target.href, 'link_click');
                         return;
                     }
@@ -167,11 +179,12 @@
             }, true);
         },
         
+        // 劫持window.open
         windowOpen() {
             const originalOpen = window.open;
             window.open = function(url, name, features) {
                 if (url && utils.isTargetUrl(url)) {
-                    utils.log('🪟 window.open call intercepted', url);
+                    utils.log('🪟 拦截window.open调用', url);
                     downloadHandler.processDownload(url, 'window_open');
                     return null;
                 }
@@ -179,17 +192,18 @@
             };
         },
         
+        // 劫持动态创建的链接
         dynamicLinks() {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType !== 1) return;
                         
-                        // Check newly added links
+                        // 检查新添加的链接
                         const links = node.querySelectorAll?.('a[href*="demo.com"]') || [];
                         links.forEach(link => this.setupLinkListener(link));
                         
-                        // Check if node itself is a link
+                        // 检查节点本身是否是链接
                         if (node.tagName === 'A' && node.href && utils.isTargetUrl(node.href)) {
                             this.setupLinkListener(node);
                         }
@@ -203,21 +217,23 @@
             });
         },
         
+        // 设置链接监听器
         setupLinkListener(link) {
-            utils.log('🔍 Dynamic link detected', link.href);
+            utils.log('🔍 发现动态创建的链接', link.href);
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 downloadHandler.processDownload(link.href, 'dynamic_link');
             });
         },
         
+        // 劫持fetch请求
         fetchRequests() {
             const originalFetch = window.fetch;
             window.fetch = function(resource, options) {
                 const url = typeof resource === 'string' ? resource : resource.url;
                 
                 if (url && utils.isTargetUrl(url)) {
-                    utils.log('🌐 Fetch request intercepted', url);
+                    utils.log('🌐 拦截fetch请求', url);
                     return downloadHandler.processDownload(url, 'fetch')
                         .then(() => new Response(null, { status: 200 }))
                         .catch(() => originalFetch.call(this, resource, options));
@@ -227,19 +243,22 @@
             };
         },
         
+        // 劫持XMLHttpRequest
         xmlHttpRequests() {
             const originalOpen = XMLHttpRequest.prototype.open;
             XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
                 if (url && utils.isTargetUrl(url)) {
-                    utils.log('📡 XMLHttpRequest intercepted', url);
+                    utils.log('📡 拦截XMLHttpRequest请求', url);
                     downloadHandler.processDownload(url, 'xhr')
                         .then(() => {
+                            // 模拟成功响应
                             this.status = 200;
                             this.statusText = 'OK';
                             this.readyState = 4;
                             this.onreadystatechange?.();
                         })
                         .catch(() => {
+                            // 如果劫持失败，继续原始请求
                             originalOpen.call(this, method, url, async, user, password);
                         });
                     return;
@@ -250,25 +269,26 @@
         }
     };
     
-    // Initialization
+    // 初始化函数
     function initialize() {
-        utils.log('🚀 Initializing download link hijacking...');
-        utils.log('📋 Configuration', CONFIG);
+        utils.log('🚀 初始化下载链接劫持...');
+        utils.log('📋 配置信息', CONFIG);
         
-        // Apply all hijacking methods
+        // 应用所有劫持方法
         Object.values(hijackMethods).forEach(method => method());
         
-        // Setup existing links
+        // 设置现有链接
         setupExistingLinks();
-        utils.log('✅ Download link hijacking activated');
+        utils.log('✅ 下载链接劫持已激活');
     }
     
+    // 设置现有链接监听
     function setupExistingLinks() {
         const existingLinks = document.querySelectorAll('a[href*="demo.com"]');
-        utils.log(`📊 Found ${existingLinks.length} target links`);
+        utils.log(`📊 发现 ${existingLinks.length} 个目标链接`);
         
         existingLinks.forEach((link, index) => {
-            utils.log(`🔗 Target link ${index + 1}:`, link.href);
+            utils.log(`🔗 目标链接 ${index + 1}:`, link.href);
             
             link.addEventListener('click', (e) => {
                 if (utils.isTargetUrl(link.href)) {
@@ -279,23 +299,24 @@
         });
     }
     
-    // Start script
+    // 启动脚本
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize);
     } else {
         initialize();
     }
     
-    // Global exposure for testing and configuration
+    // 暴露到全局用于测试和配置
     window.downloadHijacker = {
         isTargetUrl: utils.isTargetUrl,
         processDownload: downloadHandler.processDownload,
         getDynamicPort: portManager.getDynamicPort,
         buildNewUrl: urlProcessor.buildNewUrl,
         CONFIG,
+        // 动态更新配置的方法
         updateConfig(newConfig) {
             Object.assign(CONFIG, newConfig);
-            utils.log('⚙️ Configuration updated', CONFIG);
+            utils.log('⚙️ 配置已更新', CONFIG);
         }
     };
     
